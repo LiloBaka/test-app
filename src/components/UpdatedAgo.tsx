@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
+import { getElapsedSeconds, subscribeElapsedSeconds } from '../utils/elapsedTime';
 
 type Props = {
   // Момент последней успешной загрузки данных.
@@ -8,13 +9,12 @@ type Props = {
 
 // Подпись «Обновлено N сек назад».
 export function UpdatedAgo({ since }: Props) {
-  const [seconds, setSeconds] = useState(0);
+  const sinceMs = since.getTime();
+  const [seconds, setSeconds] = useState(() => getElapsedSeconds(sinceMs));
 
   useEffect(() => {
-    setInterval(() => {
-      setSeconds(seconds + 1);
-    }, 1000);
-  }, []);
+    return subscribeElapsedSeconds(sinceMs, setSeconds);
+  }, [sinceMs]);
 
   return <Text style={styles.text}>Обновлено {seconds} сек назад</Text>;
 }
