@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { fetchMatches } from '../api/matches';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { UpdatedAgo } from '../components/UpdatedAgo';
@@ -51,6 +51,7 @@ function MatchCard({ match, favorite, onToggle }: MatchCardProps) {
 export function MatchesScreen() {
   const [data, setData] = useState<MatchesResponse | null>(null);
   const [filter, setFilter] = useState<MatchFilter>('all');
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -86,7 +87,8 @@ export function MatchesScreen() {
   }, [load]);
 
   const matches = data?.matches ?? [];
-  const visibleMatches = filterMatches(matches, filter);
+  const visibleMatches = filterMatches(matches, filter, query);
+  const hasSearch = query.trim().length > 0;
 
   return (
     <View style={styles.container}>
@@ -114,6 +116,32 @@ export function MatchesScreen() {
             </View>
           ) : null}
           {updatedAt ? <UpdatedAgo since={updatedAt} /> : null}
+        </View>
+        <View style={styles.search}>
+          <Text style={styles.secondary}>Поиск по клубу</Text>
+          <View style={styles.searchField}>
+            <TextInput
+              accessibilityLabel="Поиск матчей по названию клуба"
+              placeholder="Название домашней или гостевой команды"
+              placeholderTextColor="#64748b"
+              value={query}
+              onChangeText={setQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              style={styles.searchInput}
+            />
+            {query.length > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Очистить поиск"
+                onPress={() => setQuery('')}
+                style={({ pressed }) => [styles.clearSearch, pressed && styles.dimmed]}
+              >
+                <Text style={styles.refreshText}>Очистить</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
         <View style={styles.filters}>
           {filters.map((item) => (
@@ -152,6 +180,7 @@ export function MatchesScreen() {
             contentContainerStyle={visibleMatches.length === 0 ? styles.emptyList : styles.listContent}
             data={visibleMatches}
             extraData={favorites}
+            keyboardShouldPersistTaps="handled"
             keyExtractor={(match) => match.id}
             renderItem={({ item }) => (
               <MatchCard match={item} favorite={isFavorite(item.id)} onToggle={() => toggle(item.id)} />
@@ -159,10 +188,16 @@ export function MatchesScreen() {
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>
-                  {matches.length === 0 ? 'Матчей пока нет' : 'Нет матчей по выбранному фильтру'}
+                  {matches.length === 0
+                    ? 'Матчей пока нет'
+                    : hasSearch ? 'Матчи не найдены' : 'Нет матчей по выбранному фильтру'}
                 </Text>
                 <Text style={styles.emptyDescription}>
-                  {matches.length === 0 ? 'Попробуйте обновить список позже.' : 'Выберите другой фильтр, чтобы увидеть остальные матчи.'}
+                  {matches.length === 0
+                    ? 'Попробуйте обновить список позже.'
+                    : hasSearch
+                      ? 'Измените название клуба или выберите другой фильтр.'
+                      : 'Выберите другой фильтр, чтобы увидеть остальные матчи.'}
                 </Text>
               </View>
             }
@@ -186,6 +221,10 @@ const styles = StyleSheet.create({
   updateRow: { minHeight: 34, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, paddingVertical: 8 },
   updating: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   secondary: { fontSize: 13, color: '#64748b' },
+  search: { gap: 8, paddingTop: 8, paddingBottom: 8 },
+  searchField: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#dbe3ee', borderRadius: 12 },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 14, color: '#0f172a', padding: 14 },
+  clearSearch: { padding: 12 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 8, paddingBottom: 20 },
   filter: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 12, backgroundColor: '#e9eef5' },
   selectedFilter: { backgroundColor: '#1d4ed8' },

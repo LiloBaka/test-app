@@ -86,3 +86,38 @@ test('пустой список поддерживается всеми филь
     assert.deepEqual(filterMatches(matches, filter), []);
   }
 });
+
+test('поиск находит домашний и гостевой клуб без учёта регистра', () => {
+  assert.deepEqual(filterMatches(fixture.matches, 'all', 'лОкО').map(m => m.id), ['m2']);
+  assert.deepEqual(filterMatches(fixture.matches, 'all', 'цСкА').map(m => m.id), ['m2']);
+});
+
+test('поиск по части названия учитывает обе команды и фильтр статуса', () => {
+  assert.deepEqual(filterMatches(fixture.matches, 'all', 'ДИНАМО').map(m => m.id), ['m4', 'm8']);
+  assert.deepEqual(filterMatches(fixture.matches, 'scheduled', 'Динамо').map(m => m.id), ['m8']);
+  assert.deepEqual(filterMatches(fixture.matches, 'finished', 'Динамо'), []);
+});
+
+test('пробелы по краям запроса игнорируются, очистка возвращает результаты фильтра', () => {
+  assert.deepEqual(filterMatches(fixture.matches, 'all', '  зенит  ').map(m => m.id), ['m1']);
+  for (const filter of ['all', 'scheduled', 'finished']) {
+    for (const query of ['', '   ']) {
+      assert.deepEqual(filterMatches(fixture.matches, filter, query), filterMatches(fixture.matches, filter));
+    }
+  }
+});
+
+test('неизвестный клуб и пустой исходный список дают пустой результат', () => {
+  assert.deepEqual(filterMatches(fixture.matches, 'all', 'Несуществующий клуб'), []);
+  assert.deepEqual(filterMatches([], 'all', 'Зенит'), []);
+});
+
+test('поиск сохраняет live, postponed и неизвестный статус в результатах «Все»', () => {
+  assert.deepEqual(filterMatches(fixture.matches, 'all', 'Рубин').map(m => m.id), ['m4']);
+  const postponed = filterMatches(fixture.matches, 'all', 'Факел');
+  assert.deepEqual(postponed.map(m => m.id), ['m7']);
+  assert.equal(postponed[0].startsAt, null);
+  assert.equal(postponed[0].score, null);
+  const unknown = { ...fixture.matches[0], status: 'cancelled' };
+  assert.deepEqual(filterMatches([unknown], 'all', 'Зенит'), [unknown]);
+});

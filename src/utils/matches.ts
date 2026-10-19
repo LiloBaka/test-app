@@ -6,9 +6,15 @@ const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
 });
 
-export function filterMatches(matches: Match[], filter: MatchFilter): Match[] {
+export function filterMatches(matches: Match[], filter: MatchFilter, query = ''): Match[] {
+  const search = query.trim().toLowerCase();
   // Статус берётся из API: дата сама по себе не означает завершение матча.
-  return matches.filter((match) => filter === 'all' || match.status === filter);
+  return matches.filter((match) =>
+    (filter === 'all' || match.status === filter) &&
+    (search === '' ||
+      match.home.name.toLowerCase().includes(search) ||
+      match.away.name.toLowerCase().includes(search)),
+  );
 }
 
 export function formatScore(score: Score | null): string {
