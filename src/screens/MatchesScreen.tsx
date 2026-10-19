@@ -4,46 +4,26 @@ import { fetchMatches } from '../api/matches';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { UpdatedAgo } from '../components/UpdatedAgo';
 import { useFavorites } from '../hooks/useFavorites';
-import type { Match, MatchStatus, MatchesResponse } from '../types/matches';
+import type { Match, MatchesResponse } from '../types/matches';
+import { filterMatches, formatMatchDate, formatScore, getMatchStatus } from '../utils/matches';
+import type { MatchFilter } from '../utils/matches';
 
-type Filter = 'all' | 'scheduled' | 'finished';
-
-const filters: { value: Filter; label: string }[] = [
+const filters: { value: MatchFilter; label: string }[] = [
   { value: 'all', label: 'Все' },
   { value: 'scheduled', label: 'Предстоящие' },
   { value: 'finished', label: 'Завершённые' },
 ];
 
-const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
-  day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
-});
-
-function getStatus(status: MatchStatus) {
-  switch (status) {
-    case 'scheduled':
-      return { label: 'Предстоящий', color: '#1d4ed8', backgroundColor: '#eff6ff' };
-    case 'finished':
-      return { label: 'Завершён', color: '#475569', backgroundColor: '#f1f5f9' };
-    case 'live':
-      return { label: 'Идёт матч', color: '#047857', backgroundColor: '#ecfdf5' };
-    case 'postponed':
-      return { label: 'Перенесён', color: '#92400e', backgroundColor: '#fffbeb' };
-    default:
-      return { label: 'Статус уточняется', color: '#475569', backgroundColor: '#f1f5f9' };
-  }
-}
-
 type MatchCardProps = { match: Match; favorite: boolean; onToggle: () => void };
 
 function MatchCard({ match, favorite, onToggle }: MatchCardProps) {
-  const status = getStatus(match.status);
+  const status = getMatchStatus(match.status, match.minute);
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={[styles.badge, { backgroundColor: status.backgroundColor }]}>
           <Text style={[styles.status, { color: status.color }]}>
             {status.label}
-            {match.status === 'live' && match.minute != null ? ` · ${match.minute}′` : ''}
           </Text>
         </View>
         <FavoriteButton active={favorite} onPress={onToggle} />
@@ -54,7 +34,7 @@ function MatchCard({ match, favorite, onToggle }: MatchCardProps) {
           <Text style={styles.city}>{match.home.city}</Text>
         </View>
         <Text style={styles.score}>
-          {match.score === null ? '—' : `${match.score.home}:${match.score.away}`}
+          {formatScore(match.score)}
         </Text>
         <View style={[styles.team, styles.awayTeam]}>
           <Text style={[styles.teamName, styles.alignRight]}>{match.away.name}</Text>
@@ -62,7 +42,7 @@ function MatchCard({ match, favorite, onToggle }: MatchCardProps) {
         </View>
       </View>
       <Text style={styles.date}>
-        {match.startsAt === null ? 'Дата уточняется' : dateFormatter.format(new Date(match.startsAt))}
+        {formatMatchDate(match.startsAt)}
       </Text>
     </View>
   );
@@ -70,7 +50,7 @@ function MatchCard({ match, favorite, onToggle }: MatchCardProps) {
 
 export function MatchesScreen() {
   const [data, setData] = useState<MatchesResponse | null>(null);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<MatchFilter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -106,7 +86,7 @@ export function MatchesScreen() {
   }, [load]);
 
   const matches = data?.matches ?? [];
-  const visibleMatches = matches.filter((match) => filter === 'all' || match.status === filter);
+  const visibleMatches = filterMatches(matches, filter);
 
   return (
     <View style={styles.container}>

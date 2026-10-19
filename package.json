@@ -19,7 +19,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --ignoreConfig --strict --target es2020 --module commonjs --skipLibCheck --outDir .expo/tests src/utils/matches.ts src/api/matches.ts && node --test tests/matches.test.cjs"
   },
   "private": true
 }
